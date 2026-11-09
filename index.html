@@ -28,7 +28,7 @@ img{max-width:100%}
 /* Layout: one column trip computer — always dark: black night-road hero with ultramarine glow, electric-blue figures */
 :root{
   --bg:#05070b; --weave:rgba(150,190,255,.03); --panel:#0c121b; --ink:#eef4fb; --muted:#8b9db2; --line:#1b2636;
-  --accent:#1c34ff; --accent2:#0c1fc4; --accent-ink:#ffffff; --accent-soft:#141a5c; --warm:#7fb2ff; --pattern:rgba(28,52,255,.10);
+  --accent:#1c34ff; --accent2:#0c1fc4; --accent-ink:#ffffff; --accent-soft:#141a5c; --warm:#3d8bff; --pattern:rgba(28,52,255,.10);
   --readout:#000000; --readout2:#0a1580; --readout-ink:#f3f8fc; --readout-dim:#9db7ff; --glow:rgba(60,120,255,.6);
   --hero1:#000000; --hero2:#1a2cff; --hero-ink:#f3f8fc; --hero-dim:#b4c6ff;
   --chip:#141d29; --danger:#ff6b6b; --good:#4cc38a; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark 
@@ -924,7 +924,7 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
     var st=monthStats(ym),cur=todayStr().slice(0,7);
     var W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;var c=cv.getContext("2d");
     var D='"Saira Semi Condensed","Arial Narrow",Arial,sans-serif',B='Figtree,system-ui,sans-serif';
-    var RED="#2f6bff",GOLD="#7fb2ff",INK="#f3f8fc",DIM="#a9b8d8";
+    var RED="#2f6bff",GOLD="#3d8bff",INK="#f3f8fc",DIM="#a9b8d8";
     c.fillStyle="#000000";c.fillRect(0,0,W,H);
     var g=c.createRadialGradient(W,0,0,W,0,W*0.95);g.addColorStop(0,"rgba(28,52,255,.75)");g.addColorStop(1,"rgba(28,52,255,0)");c.fillStyle=g;c.fillRect(0,0,W,H);
     c.strokeStyle="rgba(150,190,255,.035)";c.lineWidth=3;
