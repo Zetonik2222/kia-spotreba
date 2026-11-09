@@ -7,6 +7,35 @@
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
+  // Pripomienka zálohy: raz za 30 dní, ak sú v appke nejaké záznamy
+  var LAST = "kia-posledna-zaloha", SNOOZE = "kia-zaloha-neskor", DAY = 86400000;
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function fmtD(ms) { var d = new Date(ms); return d.getDate() + ". " + (d.getMonth() + 1) + ". " + d.getFullYear(); }
+  function countRecords() {
+    var d = window.appStore.exportData() || {}, n = 0;
+    ["tankovania", "umyvanie", "odvozy"].forEach(function (k) { n += Object.keys(d[k] || {}).length; });
+    return n;
+  }
+  function checkReminder() {
+    var last = +lsGet(LAST) || 0, snooze = +lsGet(SNOOZE) || 0, now = Date.now();
+    $("bkLast").textContent = last ? "Posledná záloha: " + fmtD(last) + "." : "Zálohu si zatiaľ nerobil.";
+    var n = countRecords();
+    var due = n > 0 && now > snooze && (!last || now - last > 30 * DAY);
+    if (due) {
+      $("bkRemindTxt").textContent = last
+        ? "Posledná záloha bola " + fmtD(last) + ". Máš tu " + zaz(n) + " len v tomto mobile."
+        : "Máš tu " + zaz(n) + " len v tomto mobile a ešte žiadnu zálohu.";
+    }
+    $("bkRemind").hidden = !due;
+  }
+  function zaz(n) { return n + (n === 1 ? " záznam" : n < 5 ? " záznamy" : " záznamov"); }
+  function markBackup() { lsSet(LAST, String(Date.now())); checkReminder(); }
+  $("bkRemindNow").addEventListener("click", function () { $("bkSave").click(); });
+  $("bkRemindLater").addEventListener("click", function () { lsSet(SNOOZE, String(Date.now() + 7 * DAY)); checkReminder(); });
+  setTimeout(checkReminder, 400);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) checkReminder(); });
+
   // Záloha do súboru
   $("bkSave").addEventListener("click", function () {
     try {
@@ -19,6 +48,7 @@
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
       msg("Záloha je uložená v priečinku Stiahnuté (Downloads).");
+      markBackup();
     } catch (e) { msg("Zálohu sa nepodarilo vytvoriť."); }
   });
 
@@ -43,6 +73,7 @@
         delete data._zaloha;
         window.appStore.importData(data);
         msg("Údaje sú obnovené zo zálohy.");
+        markBackup();
       } catch (e) { msg("Tento súbor nie je záloha Kia appky. Vyber súbor kia-zaloha-….json."); }
     };
     r.readAsText(f);

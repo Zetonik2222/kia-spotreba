@@ -153,6 +153,20 @@ label,.lbl{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spac
 .copybtn.ok{border-color:var(--good);color:var(--good)}
 .copybtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #copyTxt{width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:var(--readout-ink);font:.9rem/1.5 var(--f-body);padding:8px 10px;resize:none}
+.addride{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.addride:disabled{opacity:.55;cursor:default}
+.bkremind{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--accent);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);font-size:.9rem}
+.bkremind b{display:block;font-family:var(--f-display);font-size:1.1rem;color:var(--warm)}
+.bkremind span{color:var(--muted)}
+.bkr-act{display:flex;gap:8px;flex-wrap:wrap}
+.rep-ride{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;font-size:.9rem}
+.rep-ride b{font-family:var(--f-display);font-size:1.05rem;color:var(--warm);font-variant-numeric:tabular-nums}
+.rep details summary{cursor:pointer;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ride-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:.88rem}
+.ride-row .m{color:var(--muted);font-size:.8rem}
+.ride-row .c{font-family:var(--f-display);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.ride-row .del{grid-column:2;justify-self:end;background:none;border:0;color:var(--muted);font:500 .78rem var(--f-body);text-decoration:underline;cursor:pointer;padding:0}
+.ride-row .del.arm{color:var(--danger);font-weight:600}
 .reps{display:flex;flex-direction:column;gap:14px}
 .rep{border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--panel)}
 .rep-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -235,6 +249,14 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
     <h1>Spotreba<br>Kia K4 SW</h1>
     <div class="specs"><span>1.6 T-GDI</span><span>110 kW</span><span>7DCT</span><span>nádrž 47 l</span></div>
   </header>
+
+  <div class="bkremind" id="bkRemind" hidden role="status">
+    <div><b>Čas na zálohu</b><span id="bkRemindTxt">Údaje máš len v tomto mobile.</span></div>
+    <div class="bkr-act">
+      <button type="button" class="chip save" id="bkRemindNow">Zálohovať teraz</button>
+      <button type="button" class="chip" id="bkRemindLater">Neskôr</button>
+    </div>
+  </div>
 
   <div class="install" id="installBar" hidden>
     <span id="installTxt">Nainštaluj si appku na plochu.</span>
@@ -452,6 +474,10 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
         <span id="copyLbl">Kopírovať správu</span>
       </button>
       <textarea id="copyTxt" readonly hidden rows="5" aria-label="Správa na skopírovanie"></textarea>
+      <button type="button" id="addRide" class="copybtn addride" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M12.5 11v6M9.5 14h6"/></svg>
+        <span id="addRideLbl">Pridať do výpisu</span>
+      </button>
     </div>
   </section>
   <p class="err" id="err" hidden></p>
@@ -465,6 +491,7 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
     </div>
     <input id="bkFile" type="file" accept="application/json,.json" hidden>
     <p class="note" id="bkMsg" hidden></p>
+    <p class="note" id="bkLast"></p>
   </section>
 
   <footer>
@@ -536,6 +563,7 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
   function renderSplit(){
     var taxi=isTaxi();
     $("split").hidden=mode!=="trip";$("copyRow").hidden=!(mode==="trip"&&lastCost>0);
+    $("addRide").hidden=!(mode==="trip"&&taxi&&lastCost>0&&!!dbRef);
     $("brk").hidden=!(mode==="trip"&&taxi&&lastCost>0);
     $("pLbl").textContent=taxi?"Počet pasažierov":"Počet osôb";
     $("pPlus").setAttribute("aria-label",taxi?"Viac pasažierov":"Viac osôb");$("pMinus").setAttribute("aria-label",taxi?"Menej pasažierov":"Menej osôb");
@@ -582,7 +610,7 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
         $("k2").textContent="Cena odvozu";
       }
       out(fmt(l,2)+" l",fmt(cost,2)+" €",fmt(cost/km,3)+" €",fmt(co*pr,2)+" €",Math.round(TANK/co*100)+" km");
-      lastCost=cost;lastTrip=trip;$("copyTxt").hidden=true;renderSplit();
+      lastCost=cost;lastTrip=trip;$("copyTxt").hidden=true;rideSaved=false;$("addRide").disabled=false;$("addRideLbl").textContent="Pridať do výpisu";renderSplit();
     }
   }
 
@@ -840,6 +868,22 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
       $("wSum").value="";wDateManual=false;wDateRefresh();wErr("");}
     catch(err){wErr("Umývanie sa nepodarilo zapísať. Skús to znova o chvíľu.")}
   });
+  // --- Odvozy (taxi) zapísané do výpisu ---
+  var rideRows=[],rideSaved=false;
+  $("addRide").addEventListener("click",async function(){
+    if(rideSaved||!dbRef||!lastTrip||!lastTrip.taxi||!(lastCost>0))return;
+    var t=lastTrip,rec={datum:todayStr(),km:Math.round(t.km*10)/10,tamSpat:!!t.back,pasazieri:persons,
+      spolu:Math.round(lastCost*100)/100,naPasaziera:perTaxi(),palivo:Math.round(t.fuel*100)/100,
+      opotrebenie:Math.round(t.wear*100)/100,cas:Math.round(t.time*100)/100,nastupne:Math.round(t.board*100)/100,min:t.min,vytvorene:Date.now()};
+    try{await dbRef.collection("odvozy").add(rec);rideSaved=true;this.disabled=true;$("addRideLbl").textContent="Pridané do výpisu ✓"}
+    catch(e){$("addRideLbl").textContent="Nepodarilo sa uložiť"}
+  });
+  function startRides(db){
+    db.collection("odvozy").orderBy("datum","desc").limit(1000).onSnapshot(function(snap){
+      rideRows=snap.docs.map(function(d){var o=d.data()||{};o.id=d.id;return o}).filter(function(o){return typeof o.spolu==="number"&&o.datum});
+      renderReports();
+    },function(){});
+  }
   var washRows=[];
   function renderWash(rows){
     washRows=rows;renderReports();
@@ -885,10 +929,12 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
     // spotreba z úsekov medzi tankovaniami do plna, ktoré skončili v tomto mesiaci
     var lf=-1,ls=0,sl=0,sk=0;
     asc.forEach(function(x,i){if(lf>=0)ls+=x.litre;if(x.plna){if(lf>=0&&x.datum.slice(0,7)===ym){var dk=x.km-asc[lf].km;if(dk>0){sl+=ls;sk+=dk}}lf=i;ls=0}});
-    return {ym:ym,fuel:fuel,lit:lit,nFuel:fe.length,wash:wash,nWash:we.length,total:fuel+wash,km:km,cons:sk>0?sl/sk*100:null};
+    var re=rideRows.filter(function(x){return x.datum.slice(0,7)===ym});
+    var rides=re.reduce(function(a,x){return a+x.spolu},0);
+    return {ym:ym,fuel:fuel,lit:lit,nFuel:fe.length,wash:wash,nWash:we.length,total:fuel+wash,km:km,cons:sk>0?sl/sk*100:null,rides:rides,nRides:re.length,rideList:re};
   }
   function allMonths(){
-    var set={};entries.forEach(function(x){set[x.datum.slice(0,7)]=1});washRows.forEach(function(x){set[x.datum.slice(0,7)]=1});
+    var set={};entries.forEach(function(x){set[x.datum.slice(0,7)]=1});washRows.forEach(function(x){set[x.datum.slice(0,7)]=1});rideRows.forEach(function(x){set[x.datum.slice(0,7)]=1});
     return Object.keys(set).sort().reverse();
   }
   function prevMonths(ym,n){var y=+ym.slice(0,4),m=+ym.slice(5),out=[];for(var i=n-1;i>=0;i--){var d=new Date(y,m-1-i,1);out.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"))}return out}
@@ -912,6 +958,28 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
         ["",st.km!=null?fmtKm(st.km)+" km":"–","Najazdené"],["",st.cons!=null?fmt(st.cons,1)+" l":"–","Spotreba /100 km"],["",st.km?fmt(st.total/st.km,3)+" €":"–","Náklady na 1 km"]];
       cells.forEach(function(c){var d=document.createElement("div");if(c[0])d.className=c[0];var b=document.createElement("b");b.textContent=c[1];var sp=document.createElement("span");sp.textContent=c[2];d.appendChild(b);d.appendChild(sp);g.appendChild(d)});
       card.appendChild(g);
+      if(st.nRides){
+        var rr=document.createElement("div");rr.className="rep-ride";
+        var l1=document.createElement("span");l1.textContent="🚕 Odvozy "+st.nRides+"× · od pasažierov";
+        var v1=document.createElement("b");v1.textContent="+"+fmt(st.rides,2)+" €";
+        var l2=document.createElement("span");l2.textContent="Čisté náklady po odvozoch";
+        var v2=document.createElement("b");v2.textContent=fmt(st.total-st.rides,2)+" €";
+        rr.appendChild(l1);rr.appendChild(v1);
+        var rr2=document.createElement("div");rr2.className="rep-ride";rr2.style.borderTop="0";rr2.style.paddingTop="0";rr2.appendChild(l2);rr2.appendChild(v2);
+        card.appendChild(rr);card.appendChild(rr2);
+        var det=document.createElement("details");var sm=document.createElement("summary");sm.textContent="Zoznam odvozov ("+st.nRides+")";det.appendChild(sm);
+        st.rideList.slice().sort(function(a,b){return a.datum<b.datum?1:a.datum>b.datum?-1:(b.vytvorene||0)-(a.vytvorene||0)}).forEach(function(x){
+          var row=document.createElement("div");row.className="ride-row";
+          var t=document.createElement("span");t.textContent=fmtDate(x.datum)+" · "+fmt(x.km,0)+" km"+(x.tamSpat?" tam aj späť":"");
+          var c=document.createElement("span");c.className="c";c.textContent=fmt(x.spolu,2)+" €";
+          var m=document.createElement("span");m.className="m";m.textContent=x.pasazieri+(x.pasazieri===1?" pasažier":x.pasazieri>=5?" pasažierov":" pasažieri")+" · "+fmt(x.naPasaziera,2)+" € na pasažiera";
+          var del=document.createElement("button");del.type="button";del.className="del";del.textContent="Zmazať";
+          del.addEventListener("click",async function(){
+            if(!del.classList.contains("arm")){del.classList.add("arm");del.textContent="Naozaj zmazať?";setTimeout(function(){del.classList.remove("arm");del.textContent="Zmazať"},4000);return}
+            try{await dbRef.collection("odvozy").doc(x.id).delete()}catch(e){del.textContent="Nepodarilo sa zmazať"}});
+          row.appendChild(t);row.appendChild(c);row.appendChild(m);row.appendChild(del);det.appendChild(row)});
+        card.appendChild(det);
+      }
       var act=document.createElement("div");act.className="rep-act";
       var bi=document.createElement("button");bi.type="button";bi.className="chip save";bi.textContent="Obrázok výpisu";
       var box=document.createElement("div");box.className="rep-img";box.hidden=true;
@@ -947,13 +1015,15 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
     if(st.total>0){c.save();rrect(c,bx,by,bw,bh,13);c.clip();var fw=bw*st.fuel/st.total;c.fillStyle=RED;c.fillRect(bx,by,fw,bh);c.fillStyle="rgba(255,255,255,.55)";c.fillRect(bx+fw,by,bw-fw,bh);c.restore()}
     c.font="600 34px "+B;c.fillStyle=RED;c.fillRect(90,712,22,22);c.fillStyle=INK;c.fillText("Palivo "+fmt(st.fuel,2)+" €  ("+st.nFuel+"×)",126,734);
     c.fillStyle="rgba(255,255,255,.55)";c.fillRect(90,762,22,22);c.fillStyle=INK;c.fillText("Umývanie "+fmt(st.wash,2)+" €  ("+st.nWash+"×)",126,784);
+    var off=0;
+    if(st.nRides){off=50;c.fillStyle=INK;c.font="600 34px "+B;c.fillText("🚕 Odvozy "+st.nRides+"×  ·  +"+fmt(st.rides,2)+" € od pasažierov",90,834)}
     // stats row
-    var cols=[[st.km!=null?fmtKm(st.km)+" km":"–","najazdené"],[st.cons!=null?fmt(st.cons,1)+" l":"–","spotreba /100 km"],[st.km?fmt(st.total/st.km,3)+" €":"–","náklady na 1 km"]],cw=(W-180)/3,yd=900;
+    var cols=[[st.km!=null?fmtKm(st.km)+" km":"–","najazdené"],[st.cons!=null?fmt(st.cons,1)+" l":"–","spotreba /100 km"],[st.km?fmt(st.total/st.km,3)+" €":"–","náklady na 1 km"]],cw=(W-180)/3,yd=900+off;
     c.strokeStyle="rgba(255,255,255,.14)";c.lineWidth=2;c.beginPath();c.moveTo(90,yd-76);c.lineTo(W-90,yd-76);c.stroke();
     cols.forEach(function(p,i){var cx=90+i*cw;c.fillStyle=INK;c.font="700 60px "+D;c.fillText(p[0],cx,yd);c.fillStyle=DIM;c.font="500 28px "+B;c.fillText(p[1].toUpperCase(),cx,yd+44)});
     // 6-month trend
     var ms=prevMonths(ym,6),vals=ms.map(function(m){return monthStats(m).total}),top=Math.max.apply(0,vals.concat([1]));
-    var cy=1010,ch=200,colw=(W-180)/6;
+    var cy=1010+off,ch=200-off*0.6,colw=(W-180)/6;
     c.fillStyle=DIM;c.font="600 28px "+B;c.fillText("POSLEDNÝCH 6 MESIACOV",90,cy);
     ms.forEach(function(m,i){var v=vals[i],h=v/top*(ch-50),x=90+i*colw+colw*0.18,w=colw*0.64,y=cy+30+(ch-50)-h;
       if(v>0){rrect(c,x,y,w,Math.max(h,6),8);c.fillStyle=m===ym?RED:"rgba(255,255,255,.28)";c.fill();c.fillStyle=INK;c.font="600 26px "+B;c.textAlign="center";c.fillText(Math.round(v)+" €",x+w/2,y-10)}
@@ -1004,7 +1074,7 @@ footer{font-size:.78rem;color:var(--muted);line-height:1.45;padding:0 4px}
   (async function(){
     try{
       var db=window.claude&&window.claude.use?await window.claude.use("db"):null;
-      if(db){dbRef=db;$("pFixOpen").hidden=false;startLog(db);startWash(db);
+      if(db){dbRef=db;$("pFixOpen").hidden=false;startLog(db);startWash(db);startRides(db);
         try{dlRef=await window.claude.use("downloads")}catch(e){dlRef=null}}
       if(!db){clearTimeout(timer);$("pMeta").textContent="Cena z pumpy sa ukazuje len v online verzii. Zadaj ju ručne.";return}
       db.collection("ceny").orderBy("datum","desc").limit(30).onSnapshot(function(snap){

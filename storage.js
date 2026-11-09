@@ -94,7 +94,7 @@
         if (data[k] && typeof data[k] !== "object") throw new Error("bad");
       });
       store = clone(data); persist();
-      ["ceny", "tankovania", "umyvanie"].forEach(notify);
+      ["ceny", "tankovania", "umyvanie", "odvozy"].forEach(notify);
     }
   };
 
